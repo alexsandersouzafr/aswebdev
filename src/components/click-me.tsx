@@ -1,13 +1,20 @@
+import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
 import { useRef, useState, useEffect } from "react";
+import animateClickMeButton from "../animations/click-me-button";
+import transition from "../animations/transition";
 
-export default function ClickMe() {
+export default function ClickMe({
+  setOpen,
+}: {
+  setOpen: (open: boolean) => void;
+}) {
   const arrowRef = useRef<SVGSVGElement | null>(null);
   const divRef = useRef<HTMLDivElement | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
-  const previousAngle = useRef(0); // Armazena o ângulo anterior para transição suave
+  const previousAngle = useRef(0);
+  const [isClicked, setIsClicked] = useState(false);
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
@@ -24,79 +31,18 @@ export default function ClickMe() {
   }, []);
 
   useGSAP(() => {
-    if (!divRef.current || !arrowRef.current) return;
+    animateClickMeButton(
+      arrowRef,
+      divRef,
+      mousePosition,
+      previousAngle,
+      isHovering,
+    );
 
-    const circleBoundingRect = divRef.current.getBoundingClientRect();
-    const circleCenter = {
-      x: circleBoundingRect.left + circleBoundingRect.width / 2,
-      y: circleBoundingRect.top + circleBoundingRect.height / 2,
-    };
-
-    // Cálculo do ângulo correto
-    let angle =
-      Math.atan2(
-        mousePosition.y - circleCenter.y,
-        mousePosition.x - circleCenter.x,
-      ) *
-      (180 / Math.PI);
-
-    // Evita o problema de rotação completa ao cruzar o eixo
-    const delta = angle - previousAngle.current;
-    if (Math.abs(delta) > 180) {
-      angle = previousAngle.current + (delta > 0 ? delta - 360 : delta + 360);
+    if (isClicked) {
+      transition(setOpen);
     }
-
-    previousAngle.current = angle; // Atualiza o ângulo anterior
-
-    // Define o raio da órbita
-    const radius = circleBoundingRect.width / 2.5;
-
-    // Calcula a posição relativa ao centro do círculo
-    const x = radius * Math.cos(angle * (Math.PI / 180));
-    const y = radius * Math.sin(angle * (Math.PI / 180));
-
-    if (isHovering) {
-      gsap.set(arrowRef.current, {
-        opacity: 0,
-        duration: 1,
-      });
-      gsap.set(".phantom", {
-        opacity: 0,
-        duration: 0.01,
-        x: circleCenter.x,
-        y: circleCenter.y,
-      });
-    }
-
-    if (!isHovering) {
-      gsap.set(arrowRef.current, {
-        opacity: 1,
-        duration: 1,
-      });
-      // Aplica a animação com GSAP
-      gsap.to(arrowRef.current, {
-        rotation: angle + 90,
-        x: x,
-        y: y,
-        ease: "power1.out",
-        duration: 0.001,
-      });
-
-      gsap.fromTo(
-        ".phantom",
-        { opacity: 0.3 },
-        {
-          rotation: angle + 90,
-          x: x,
-          y: y,
-          ease: "power1.out",
-          duration: 0.2,
-          stagger: 0.1,
-          opacity: 0,
-        },
-      );
-    }
-  }, [mousePosition]);
+  }, [mousePosition, isHovering, isClicked]);
 
   return (
     <div
@@ -104,12 +50,13 @@ export default function ClickMe() {
       className="relative flex size-[700px] items-center justify-center"
     >
       <button
-        className="bg-blue text-yellow text-md z-10 flex size-[300px] cursor-pointer items-center justify-center rounded-full p-4 text-5xl font-black transition-all duration-300 hover:scale-125"
+        className="bg-blue click-me-button text-md text-yellow z-10 flex size-[300px] cursor-pointer items-center justify-center rounded-full p-4 text-5xl font-black"
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
+        onClick={() => setIsClicked(true)}
       >
-        CLICK ME
-      </button>{" "}
+        <span className="button-text">CLICK ME</span>
+      </button>
       <svg
         ref={arrowRef}
         width="48"
